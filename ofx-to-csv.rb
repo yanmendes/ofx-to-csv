@@ -4,7 +4,7 @@ require 'rubygems'
 require 'bundler/setup'
 
 require 'ofx-parser'
-require 'fastercsv'
+require 'csv'
 require 'active_support/inflector'
 
 ofx_file = ARGV.shift
@@ -15,11 +15,13 @@ end
 
 ofx = OfxParser::OfxParser.parse(open(ofx_file))
 
-ofx.bank_account.statement.transactions.each do |transaction|
-  date  = transaction.date.strftime('%Y-%m-%d')
-  payee = ActiveSupport::Inflector.titleize(transaction.payee)
-  memo  = ActiveSupport::Inflector.titleize(transaction.memo)
-  type  = ActiveSupport::Inflector.titleize(transaction.type)
-  
-  puts [date, transaction.fit_id, payee, memo, type, transaction.amount].to_csv
+CSV.open("output.csv", "wb") do |csv|
+  csv << ['date', 'memo', 'type', 'amount']
+  ofx.bank_account.statement.transactions.each do |transaction|
+    date  = transaction.date.strftime('%Y-%m-%d')
+    memo  = ActiveSupport::Inflector.titleize(transaction.memo).gsub("\n",'').gsub!(/\s+/,' ')
+    type  = ActiveSupport::Inflector.titleize(transaction.type)
+    
+    csv << [date, memo, type, transaction.amount]
+  end
 end
